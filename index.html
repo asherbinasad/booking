@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Booking Manager">
+<title>Booking Manager</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --black:#111;--white:#fff;--off:#f5f5f3;
+  --border:#e4e4e0;--mid:#999;--surface:#fafaf8;
+  --green-bg:#eaf3de;--green-tx:#2e6010;--green-bd:#b8d98a;
+  --amber-bg:#fef3e2;--amber-tx:#8a4f0a;--amber-bd:#f5c06a;
+  --red-bg:#fdf0f0;--red-tx:#991f1f;--red-bd:#f2aaaa;
+  --blue-bg:#e8f2fc;--blue-tx:#1356a0;--blue-bd:#a8cef5;
+  --radius:14px;--radius-sm:10px;
+}
+html,body{height:100%;background:#eeecea;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;color:#111;}
+body{display:flex;flex-direction:column;max-width:680px;margin:0 auto;min-height:100vh;background:#fff;position:relative;}
+
+/* ── AUTH SCREEN ── */
+#auth-screen{
+  position:fixed;inset:0;background:var(--black);z-index:1000;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:40px 32px;text-align:center;
+}
+.auth-logo{font-size:52px;margin-bottom:24px;}
+.auth-title{font-size:26px;font-weight:700;color:#fff;letter-spacing:-.5px;margin-bottom:10px;}
+.auth-desc{font-size:14px;color:rgba(255,255,255,.55);line-height:1.7;margin-bottom:36px;max-width:300px;}
+.auth-btn{
+  display:flex;align-items:center;gap:12px;
+  background:#fff;color:#111;border:none;border-radius:12px;
+  padding:14px 24px;font-size:15px;font-weight:600;cursor:pointer;
+  font-family:inherit;transition:opacity .15s;width:100%;max-width:320px;justify-content:center;
+}
+.auth-btn:hover{opacity:.9;}
+.auth-btn img{width:22px;height:22px;}
+.auth-note{font-size:11px;color:rgba(255,255,255,.3);margin-top:20px;line-height:1.6;}
+
+/* ── TOP BAR ── */
+.topbar{
+  background:var(--black);color:#fff;
+  padding:16px 20px 0;position:sticky;top:0;z-index:50;
+}
+.topbar-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.brand{}
+.app-name{font-size:17px;font-weight:700;letter-spacing:-.4px;}
+.app-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:1px;}
+.user-chip{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.1);border-radius:999px;padding:5px 12px 5px 6px;cursor:pointer;
+}
+.user-avatar{
+  width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;
+  overflow:hidden;flex-shrink:0;
+}
+.user-avatar img{width:100%;height:100%;object-fit:cover;}
+.user-name{font-size:12px;font-weight:500;color:rgba(255,255,255,.8);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tabs{display:flex;gap:2px;background:rgba(255,255,255,.1);border-radius:10px;padding:3px;margin-top:2px;}
+.tab{
+  flex:1;padding:7px 12px;font-size:13px;font-weight:500;
+  border:none;background:none;color:rgba(255,255,255,.55);
+  border-radius:8px;cursor:pointer;transition:all .2s;font-family:inherit;
+}
+.tab.active{background:#fff;color:var(--black);}
+
+/* ── CONTENT ── */
+.panel{flex:1;overflow-y:auto;padding:18px 16px 90px;display:none;}
+.panel.active{display:block;}
+
+/* ── SECTIONS ── */
+.sec{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);margin:22px 0 9px;}
+.sec:first-child{margin-top:6px;}
+
+/* ── OPTION CARDS ── */
+.card-grid{display:grid;gap:8px;}
+.g3{grid-template-columns:repeat(3,1fr);}
+.g2{grid-template-columns:repeat(2,1fr);}
+.opt{
+  border:2px solid var(--border);border-radius:var(--radius);
+  padding:14px 8px 13px;text-align:center;cursor:pointer;
+  background:#fff;transition:border-color .15s,background .15s,transform .08s;
+  user-select:none;-webkit-user-select:none;
+}
+.opt:active{transform:scale(.96);}
+.opt.sel{border-color:var(--black);background:var(--black);}
+.opt-icon{font-size:24px;display:block;margin-bottom:7px;line-height:1;}
+.opt-label{font-size:12px;font-weight:700;color:#111;line-height:1.3;}
+.opt-sub{font-size:10px;color:#aaa;margin-top:3px;}
+.opt.sel .opt-label{color:#fff;}
+.opt.sel .opt-sub{color:rgba(255,255,255,.55);}
+
+/* ── INPUTS ── */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+input[type=text],input[type=tel],input[type=date],input[type=time],textarea{
+  width:100%;border:2px solid var(--border);border-radius:var(--radius-sm);
+  padding:12px 13px;font-size:15px;font-family:inherit;
+  background:#fff;color:#111;outline:none;
+  transition:border-color .15s;-webkit-appearance:none;appearance:none;
+}
+input:focus,textarea:focus{border-color:#aaa;}
+textarea{resize:none;height:76px;line-height:1.5;}
+::placeholder{color:#ccc;}
+
+/* ── NOP ── */
+.stepper{display:flex;align-items:center;border:2px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;background:#fff;}
+.st-btn{width:54px;height:52px;border:none;background:#f8f8f6;cursor:pointer;font-size:24px;color:#111;font-family:inherit;transition:background .1s;flex-shrink:0;line-height:1;}
+.st-btn:active{background:#edede9;}
+.st-val{flex:1;text-align:center;font-size:22px;font-weight:700;color:#111;}
+.quick-btns{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;}
+.qbtn{
+  padding:5px 13px;font-size:12px;font-weight:600;
+  border:1.5px solid var(--border);border-radius:999px;
+  background:#fff;cursor:pointer;color:#666;font-family:inherit;transition:all .12s;
+}
+.qbtn:active{background:var(--black);color:#fff;border-color:var(--black);}
+
+/* ── STATUS PILLS ── */
+.pill-row{display:flex;gap:8px;}
+.pill{
+  flex:1;padding:11px 6px;border:2px solid var(--border);border-radius:999px;
+  text-align:center;cursor:pointer;font-size:12px;font-weight:700;
+  color:#aaa;background:#fff;transition:all .15s;font-family:inherit;
+}
+.pill.p-confirmed{background:var(--green-bg);color:var(--green-tx);border-color:var(--green-bd);}
+.pill.p-tentative{background:var(--amber-bg);color:var(--amber-tx);border-color:var(--amber-bd);}
+.pill.p-cancelled{background:var(--red-bg);color:var(--red-tx);border-color:var(--red-bd);}
+
+/* ── SAVE BTN ── */
+.save-btn{
+  width:100%;padding:16px;margin-top:22px;
+  background:var(--black);color:#fff;border:none;border-radius:var(--radius);
+  font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:opacity .15s,transform .08s;letter-spacing:-.2px;
+}
+.save-btn:active{transform:scale(.98);}
+.save-btn:disabled{opacity:.35;cursor:not-allowed;}
+
+/* ── BOOKING CARDS ── */
+.bcard{border:1.5px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px;background:#fff;}
+.bcard-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.bname{font-size:16px;font-weight:700;color:#111;margin-bottom:4px;}
+.bmeta{font-size:13px;color:#666;line-height:1.65;}
+.badge{font-size:11px;font-weight:700;padding:4px 11px;border-radius:999px;white-space:nowrap;flex-shrink:0;}
+.bg-banquet{background:var(--green-bg);color:var(--green-tx);}
+.bg-dine{background:var(--blue-bg);color:var(--blue-tx);}
+.bg-catering{background:var(--amber-bg);color:var(--amber-tx);}
+.bnotes{font-size:12px;color:#999;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-style:italic;}
+.bcard-actions{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.abtn{
+  flex:1;padding:9px 8px;font-size:13px;font-weight:600;
+  border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  background:#fff;cursor:pointer;color:#111;font-family:inherit;transition:background .1s;
+}
+.abtn:active{background:var(--surface);}
+.abtn.del{color:var(--red-tx);border-color:var(--red-bd);}
+.abtn.del:active{background:var(--red-bg);}
+
+/* ── FILTER CHIPS ── */
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px;}
+.chip{
+  padding:7px 16px;font-size:13px;font-weight:600;
+  border:1.5px solid var(--border);border-radius:999px;
+  background:#fff;cursor:pointer;color:#888;font-family:inherit;transition:all .15s;
+}
+.chip.active{background:var(--black);color:#fff;border-color:var(--black);}
+
+/* ── EMPTY / LOADING ── */
+.empty{text-align:center;padding:60px 20px;color:#ccc;font-size:14px;}
+.spinner{display:inline-block;width:20px;height:20px;border:2.5px solid #ddd;border-top-color:#888;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(100px);
+  background:var(--black);color:#fff;padding:12px 22px;border-radius:999px;
+  font-size:13px;font-weight:600;transition:transform .32s cubic-bezier(.34,1.56,.64,1);
+  z-index:9999;white-space:nowrap;pointer-events:none;
+  box-shadow:0 6px 24px rgba(0,0,0,.22);
+}
+#toast.show{transform:translateX(-50%) translateY(0);}
+#toast.ok{background:#1e5c08;}
+#toast.err{background:#8b1a1a;}
+
+/* ── BOTTOM SHEET ── */
+.sheet-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:200;align-items:flex-end;justify-content:center;}
+.sheet-bg.open{display:flex;}
+.sheet{
+  background:#fff;border-radius:22px 22px 0 0;
+  padding:0 16px 44px;width:100%;max-width:680px;
+  max-height:92vh;overflow-y:auto;
+}
+.sheet-handle{width:38px;height:4px;background:#ddd;border-radius:2px;margin:14px auto 18px;}
+.sheet-title{font-size:18px;font-weight:700;color:#111;margin-bottom:2px;}
+
+/* ── CONFIRM DIALOG ── */
+.dlg-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;padding:24px;}
+.dlg-bg.open{display:flex;}
+.dlg{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:340px;text-align:center;}
+.dlg h3{font-size:17px;font-weight:700;margin-bottom:9px;}
+.dlg p{font-size:14px;color:#777;margin-bottom:24px;line-height:1.55;}
+.dlg-btns{display:flex;gap:10px;}
+.dlg-btns button{flex:1;padding:13px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
+.d-back{background:#f0f0ee;color:#333;}
+.d-del{background:#8b1a1a;color:#fff;}
+
+/* ── SIGN OUT MENU ── */
+#signout-menu{
+  display:none;position:fixed;top:70px;right:20px;
+  background:#fff;border-radius:12px;padding:6px;z-index:500;
+  box-shadow:0 8px 30px rgba(0,0,0,.15);border:1px solid var(--border);min-width:160px;
+}
+#signout-menu.open{display:block;}
+.menu-item{padding:10px 14px;font-size:13px;font-weight:500;cursor:pointer;border-radius:8px;color:#333;}
+.menu-item:hover{background:#f5f5f3;}
+.menu-item.danger{color:var(--red-tx);}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-logo">🍽️</div>
+  <div class="auth-title">Booking Manager</div>
+  <div class="auth-desc">Sign in with your Google account to manage restaurant and banquet bookings connected to your Google Calendar.</div>
+  <button class="auth-btn" onclick="startAuth()">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+    Sign in with Google
+  </button>
+  <div class="auth-note">Your data stays in your own Google Calendar.<br>This app never stores your information.</div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-app" style="display:none;flex-direction:column;min-height:100vh;">
+
+  <div class="topbar">
+    <div class="topbar-row">
+      <div class="brand">
+        <div class="app-name">Booking Manager</div>
+        <div class="app-sub">Restaurant &amp; Banquet</div>
+      </div>
+      <div class="user-chip" onclick="toggleMenu()">
+        <div class="user-avatar" id="user-avatar"></div>
+        <span class="user-name" id="user-name">My Account</span>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('new',this)">➕ New Booking</button>
+      <button class="tab" onclick="switchTab('upcoming',this)">📋 Upcoming</button>
+    </div>
+  </div>
+
+  <!-- NEW BOOKING -->
+  <div class="panel active" id="panel-new">
+
+    <div class="sec">Booking type</div>
+    <div class="card-grid g3" id="type-grid">
+      <div class="opt" onclick="pick(this,'type-grid')">
+        <span class="opt-icon">🥂</span>
+        <div class="opt-label">Banquet / Event</div>
+        <div class="opt-sub">Hall booking</div>
+      </div>
+      <div class="opt" onclick="pick(this,'type-grid')">
+        <span class="opt-icon">🍽️</span>
+        <div class="opt-label">Dine-in</div>
+        <div class="opt-sub">Restaurant table</div>
+      </div>
+      <div class="opt" onclick="pick(this,'type-grid')">
+        <span class="opt-icon">🚗</span>
+        <div class="opt-label">Catering</div>
+        <div class="opt-sub">Off-site service</div>
+      </div>
+    </div>
+
+    <div class="sec">Venue</div>
+    <div class="card-grid g3" id="venue-grid">
+      <div class="opt" onclick="pick(this,'venue-grid')">
+        <span class="opt-icon">⬆️</span>
+        <div class="opt-label">Upstairs</div>
+      </div>
+      <div class="opt" onclick="pick(this,'venue-grid')">
+        <span class="opt-icon">🏠</span>
+        <div class="opt-label">Ground Floor</div>
+      </div>
+      <div class="opt" onclick="pick(this,'venue-grid')">
+        <span class="opt-icon">📍</span>
+        <div class="opt-label">Off-site</div>
+        <div class="opt-sub">Catering location</div>
+      </div>
+    </div>
+
+    <div class="sec">Date &amp; time</div>
+    <div class="row2">
+      <input type="date" id="f-date">
+      <input type="time" id="f-time">
+    </div>
+    <div style="margin-top:8px;max-width:calc(50% - 4px);">
+      <input type="time" id="f-endtime" placeholder="End time (optional)">
+    </div>
+
+    <div class="sec">No. of persons</div>
+    <div class="stepper">
+      <button class="st-btn" onclick="adjNOP(-10)">−</button>
+      <span class="st-val" id="nop-val">20</span>
+      <button class="st-btn" onclick="adjNOP(10)">+</button>
+    </div>
+    <div class="quick-btns">
+      <button class="qbtn" onclick="setNOP(25)">25</button>
+      <button class="qbtn" onclick="setNOP(50)">50</button>
+      <button class="qbtn" onclick="setNOP(75)">75</button>
+      <button class="qbtn" onclick="setNOP(100)">100</button>
+      <button class="qbtn" onclick="setNOP(150)">150</button>
+      <button class="qbtn" onclick="setNOP(200)">200</button>
+      <button class="qbtn" onclick="setNOP(250)">250</button>
+      <button class="qbtn" onclick="setNOP(300)">300</button>
+    </div>
+
+    <div class="sec">Contact details</div>
+    <div class="row2">
+      <input type="text" id="f-name" placeholder="Contact name">
+      <input type="tel" id="f-phone" placeholder="Phone number">
+    </div>
+
+    <div class="sec">Status</div>
+    <div class="pill-row" id="status-pills">
+      <button class="pill p-confirmed" onclick="setStatus(this,'Confirmed')">✓ Confirmed</button>
+      <button class="pill" onclick="setStatus(this,'Tentative')">~ Tentative</button>
+      <button class="pill" onclick="setStatus(this,'Cancelled')">✕ Cancelled</button>
+    </div>
+
+    <div class="sec">Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:#bbb;">(optional)</span></div>
+    <textarea id="f-notes" placeholder="Special requests, menu preferences, dietary requirements..."></textarea>
+
+    <button class="save-btn" id="save-btn" onclick="saveBooking()">Save Booking to Calendar</button>
+  </div>
+
+  <!-- UPCOMING -->
+  <div class="panel" id="panel-upcoming">
+    <div class="chips">
+      <button class="chip active" onclick="setFilter('all',this)">All</button>
+      <button class="chip" onclick="setFilter('Banquet',this)">Banquet</button>
+      <button class="chip" onclick="setFilter('Dine',this)">Dine-in</button>
+      <button class="chip" onclick="setFilter('Catering',this)">Catering</button>
+    </div>
+    <div id="list-wrap"><div class="empty"><span class="spinner"></span>Loading...</div></div>
+  </div>
+
+</div>
+
+<!-- EDIT SHEET -->
+<div class="sheet-bg" id="edit-sheet">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Amend Booking</div>
+
+    <div class="sec">Booking type</div>
+    <div class="card-grid g3" id="e-type-grid">
+      <div class="opt" onclick="pick(this,'e-type-grid')"><span class="opt-icon">🥂</span><div class="opt-label">Banquet / Event</div></div>
+      <div class="opt" onclick="pick(this,'e-type-grid')"><span class="opt-icon">🍽️</span><div class="opt-label">Dine-in</div></div>
+      <div class="opt" onclick="pick(this,'e-type-grid')"><span class="opt-icon">🚗</span><div class="opt-label">Catering</div></div>
+    </div>
+
+    <div class="sec">Venue</div>
+    <div class="card-grid g3" id="e-venue-grid">
+      <div class="opt" onclick="pick(this,'e-venue-grid')"><span class="opt-icon">⬆️</span><div class="opt-label">Upstairs</div></div>
+      <div class="opt" onclick="pick(this,'e-venue-grid')"><span class="opt-icon">🏠</span><div class="opt-label">Ground Floor</div></div>
+      <div class="opt" onclick="pick(this,'e-venue-grid')"><span class="opt-icon">📍</span><div class="opt-label">Off-site</div></div>
+    </div>
+
+    <div class="sec">Date &amp; time</div>
+    <div class="row2"><input type="date" id="e-date"><input type="time" id="e-time"></div>
+    <div style="margin-top:8px;max-width:calc(50% - 4px);"><input type="time" id="e-endtime"></div>
+
+    <div class="sec">No. of persons</div>
+    <div class="stepper">
+      <button class="st-btn" onclick="adjENOP(-10)">−</button>
+      <span class="st-val" id="e-nop-val">20</span>
+      <button class="st-btn" onclick="adjENOP(10)">+</button>
+    </div>
+    <div class="quick-btns">
+      <button class="qbtn" onclick="setENOP(25)">25</button>
+      <button class="qbtn" onclick="setENOP(50)">50</button>
+      <button class="qbtn" onclick="setENOP(75)">75</button>
+      <button class="qbtn" onclick="setENOP(100)">100</button>
+      <button class="qbtn" onclick="setENOP(150)">150</button>
+      <button class="qbtn" onclick="setENOP(200)">200</button>
+    </div>
+
+    <div class="sec">Contact details</div>
+    <div class="row2"><input type="text" id="e-name" placeholder="Name"><input type="tel" id="e-phone" placeholder="Phone"></div>
+
+    <div class="sec">Status</div>
+    <div class="pill-row" id="e-status-pills">
+      <button class="pill" onclick="setEStatus(this,'Confirmed')">✓ Confirmed</button>
+      <button class="pill" onclick="setEStatus(this,'Tentative')">~ Tentative</button>
+      <button class="pill" onclick="setEStatus(this,'Cancelled')">✕ Cancelled</button>
+    </div>
+
+    <div class="sec">Notes</div>
+    <textarea id="e-notes" placeholder="Notes..."></textarea>
+
+    <div style="display:flex;gap:10px;margin-top:22px;">
+      <button class="abtn" style="flex:.5;padding:13px;" onclick="closeSheet()">Cancel</button>
+      <button class="save-btn" id="e-save-btn" onclick="doEdit()" style="flex:1;margin:0;">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- CANCEL DIALOG -->
+<div class="dlg-bg" id="cancel-dlg">
+  <div class="dlg">
+    <h3>Cancel this booking?</h3>
+    <p>This will permanently remove it from Google Calendar and cannot be undone.</p>
+    <div class="dlg-btns">
+      <button class="d-back" onclick="closeDlg()">Go Back</button>
+      <button class="d-del" id="dlg-confirm">Yes, Cancel It</button>
+    </div>
+  </div>
+</div>
+
+<!-- SIGN OUT MENU -->
+<div id="signout-menu">
+  <div class="menu-item" id="menu-email" style="color:#999;font-size:12px;cursor:default;"></div>
+  <div class="menu-item danger" onclick="signOut()">Sign out</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const CLIENT_ID = '644062350798-4f4f9hb16o5r0c0bflv51cgq30h4b5ih.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/calendar';
+const CAL_ID = 'primary';
+const TZ = 'Asia/Karachi';
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+let accessToken = null;
+let tokenExpiry = 0;
+let nop = 20, eNop = 20;
+let curStatus = 'Confirmed', eStatus = 'Confirmed';
+let allEvents = [], curFilter = 'all', editId = null;
+let tokenClient;
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+window.onload = () => {
+  document.getElementById('f-date').value = todayStr();
+  // Check if we have a saved token
+  const saved = sessionStorage.getItem('bm_token');
+  const exp = parseInt(sessionStorage.getItem('bm_expiry') || '0');
+  if (saved && Date.now() < exp) {
+    accessToken = saved;
+    tokenExpiry = exp;
+    launchApp(JSON.parse(sessionStorage.getItem('bm_user') || '{}'));
+  }
+};
+
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+// ─── AUTH ──────────────────────────────────────────────────────────────────
+function startAuth() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if (resp.error) { toast('Sign in failed. Please try again.', 'err'); return; }
+      accessToken = resp.access_token;
+      tokenExpiry = Date.now() + (resp.expires_in * 1000);
+      sessionStorage.setItem('bm_token', accessToken);
+      sessionStorage.setItem('bm_expiry', tokenExpiry.toString());
+      fetchUserInfo();
+    }
+  });
+  tokenClient.requestAccessToken({prompt: 'consent'});
+}
+
+async function fetchUserInfo() {
+  try {
+    const r = await gFetch('https://www.googleapis.com/oauth2/v3/userinfo');
+    const user = await r.json();
+    sessionStorage.setItem('bm_user', JSON.stringify(user));
+    launchApp(user);
+  } catch(e) { launchApp({}); }
+}
+
+function launchApp(user) {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'flex';
+  // Set user avatar/name
+  const nameEl = document.getElementById('user-name');
+  const avatarEl = document.getElementById('user-avatar');
+  if (user.name) nameEl.textContent = user.name.split(' ')[0];
+  if (user.picture) avatarEl.innerHTML = `<img src="${user.picture}">`;
+  else if (user.name) avatarEl.textContent = user.name[0].toUpperCase();
+  document.getElementById('menu-email').textContent = user.email || '';
+}
+
+function signOut() {
+  google.accounts.oauth2.revoke(accessToken, () => {});
+  accessToken = null;
+  sessionStorage.clear();
+  closeMenu();
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  toast('Signed out');
+}
+
+// ─── API HELPER ────────────────────────────────────────────────────────────
+async function gFetch(url, opts = {}) {
+  opts.headers = { ...(opts.headers||{}), 'Authorization': `Bearer ${accessToken}` };
+  const r = await fetch(url, opts);
+  if (r.status === 401) {
+    // Token expired — re-auth
+    toast('Session expired. Please sign in again.', 'err');
+    setTimeout(() => { sessionStorage.clear(); location.reload(); }, 2000);
+    throw new Error('Unauthorized');
+  }
+  return r;
+}
+
+// ─── TABS ──────────────────────────────────────────────────────────────────
+function switchTab(id, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-' + id).classList.add('active');
+  if (id === 'upcoming') loadBookings();
+}
+
+// ─── OPTION CARDS ──────────────────────────────────────────────────────────
+function pick(el, gridId) {
+  document.querySelectorAll('#' + gridId + ' .opt').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function getSel(gridId) {
+  const s = document.querySelector('#' + gridId + ' .opt.sel');
+  return s ? s.querySelector('.opt-label').textContent.trim() : '';
+}
+
+// ─── NOP ───────────────────────────────────────────────────────────────────
+function adjNOP(d) { nop = Math.max(1, nop + d); document.getElementById('nop-val').textContent = nop; }
+function setNOP(v) { nop = v; document.getElementById('nop-val').textContent = nop; }
+function adjENOP(d) { eNop = Math.max(1, eNop + d); document.getElementById('e-nop-val').textContent = eNop; }
+function setENOP(v) { eNop = v; document.getElementById('e-nop-val').textContent = eNop; }
+
+// ─── STATUS ────────────────────────────────────────────────────────────────
+function setStatus(el, v) {
+  document.querySelectorAll('#status-pills .pill').forEach(p => p.className = 'pill');
+  el.classList.add('p-' + v.toLowerCase()); curStatus = v;
+}
+function setEStatus(el, v) {
+  document.querySelectorAll('#e-status-pills .pill').forEach(p => p.className = 'pill');
+  el.classList.add('p-' + v.toLowerCase()); eStatus = v;
+}
+
+// ─── TOAST ─────────────────────────────────────────────────────────────────
+let _tt;
+function toast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + type;
+  clearTimeout(_tt); _tt = setTimeout(() => t.className = '', 3200);
+}
+
+// ─── DESCRIPTION ───────────────────────────────────────────────────────────
+function buildDesc(d) {
+  return `📞 ${d.phone||'—'}\n👥 NOP: ${d.nop}\n🏠 ${d.venue}\n📋 ${d.type}\n🔖 ${d.status}${d.notes?'\n📝 '+d.notes:''}`;
+}
+function parseDesc(raw) {
+  const g = rx => { const m=(raw||'').match(rx); return m?m[1].trim():''; };
+  return {
+    phone: g(/📞 (.+)/), nop: g(/👥 NOP: (.+)/),
+    venue: g(/🏠 (.+)/), type: g(/📋 (.+)/),
+    status: g(/🔖 (.+)/), notes: g(/📝 ([\s\S]+)$/)
+  };
+}
+
+// ─── SAVE BOOKING ──────────────────────────────────────────────────────────
+async function saveBooking() {
+  if (!accessToken) { toast('Please sign in first', 'err'); return; }
+  const type = getSel('type-grid');
+  const venue = getSel('venue-grid');
+  const date = document.getElementById('f-date').value;
+  const time = document.getElementById('f-time').value;
+  const name = document.getElementById('f-name').value.trim();
+  const phone = document.getElementById('f-phone').value.trim();
+  const notes = document.getElementById('f-notes').value.trim();
+  const endtime = document.getElementById('f-endtime').value;
+
+  if (!name) { toast('Please enter a contact name', 'err'); return; }
+  if (!date || !time) { toast('Please select date and time', 'err'); return; }
+  if (!type) { toast('Please select a booking type', 'err'); return; }
+  if (!venue) { toast('Please select a venue', 'err'); return; }
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  const startDT = `${date}T${time}:00`;
+  const hr = String(Math.min(23, parseInt(time) + 2)).padStart(2,'0');
+  const endDT = endtime ? `${date}T${endtime}:00` : `${date}T${hr}:${time.split(':')[1]}:00`;
+
+  const event = {
+    summary: `[${type}] ${name} — NOP: ${nop}`,
+    description: buildDesc({phone, nop, venue, type, status: curStatus, notes}),
+    location: venue,
+    start: {dateTime: startDT, timeZone: TZ},
+    end: {dateTime: endDT, timeZone: TZ},
+    colorId: type.includes('Banquet')||type.includes('Event') ? '10' : type.includes('Dine') ? '7' : '5'
+  };
+
+  try {
+    const r = await gFetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CAL_ID)}/events`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(event)
+    });
+    if (r.ok) {
+      toast('Booking saved! 🎉', 'ok');
+      resetForm();
+    } else {
+      const err = await r.json();
+      toast('Error: ' + (err.error?.message || 'Could not save'), 'err');
+    }
+  } catch(e) { if (e.message !== 'Unauthorized') toast('Connection error', 'err'); }
+  btn.disabled = false; btn.textContent = 'Save Booking to Calendar';
+}
+
+function resetForm() {
+  ['f-name','f-phone','f-notes','f-time','f-endtime'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-date').value = todayStr();
+  document.querySelectorAll('#panel-new .opt').forEach(c => c.classList.remove('sel'));
+  nop = 20; document.getElementById('nop-val').textContent = 20;
+  document.querySelectorAll('#status-pills .pill').forEach(p => p.className = 'pill');
+  document.querySelector('#status-pills .pill').classList.add('p-confirmed');
+  curStatus = 'Confirmed';
+}
+
+// ─── LOAD BOOKINGS ─────────────────────────────────────────────────────────
+async function loadBookings() {
+  if (!accessToken) return;
+  document.getElementById('list-wrap').innerHTML = '<div class="empty"><span class="spinner"></span>Loading bookings...</div>';
+  try {
+    const now = new Date().toISOString();
+    const fut = new Date(); fut.setDate(fut.getDate() + 90);
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CAL_ID)}/events?timeMin=${encodeURIComponent(now)}&timeMax=${encodeURIComponent(fut.toISOString())}&singleEvents=true&orderBy=startTime&timeZone=${encodeURIComponent(TZ)}&maxResults=100`;
+    const r = await gFetch(url);
+    const data = await r.json();
+    allEvents = (data.items || []).filter(e => e.summary && e.summary.includes('['));
+    renderList();
+  } catch(e) { if (e.message !== 'Unauthorized') document.getElementById('list-wrap').innerHTML = '<div class="empty">Could not load bookings. Check your connection.</div>'; }
+}
+
+function renderList() {
+  const wrap = document.getElementById('list-wrap');
+  const list = curFilter === 'all' ? allEvents : allEvents.filter(e => (e.summary||'').includes(curFilter));
+  if (!list.length) { wrap.innerHTML = '<div class="empty">No upcoming bookings found.</div>'; return; }
+
+  wrap.innerHTML = list.map(ev => {
+    const d = parseDesc(ev.description || '');
+    const typeRaw = d.type || (ev.summary||'').match(/\[([^\]]+)\]/)?.[1] || '';
+    const isBanquet = typeRaw.includes('Banquet')||typeRaw.includes('Event');
+    const isDine = typeRaw.includes('Dine');
+    const bCls = isBanquet ? 'bg-banquet' : isDine ? 'bg-dine' : 'bg-catering';
+    const bLbl = isBanquet ? 'Banquet' : isDine ? 'Dine-in' : 'Catering';
+    const dt = ev.start?.dateTime ? new Date(ev.start.dateTime) : null;
+    const dtEnd = ev.end?.dateTime ? new Date(ev.end.dateTime) : null;
+    const dateStr = dt ? dt.toLocaleDateString('en-PK',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) : '';
+    const timeStr = dt ? dt.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit'}) : '';
+    const endStr = dtEnd ? dtEnd.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit'}) : '';
+    const name = (ev.summary||'').replace(/^\[[^\]]+\]\s*/,'').split('—')[0].trim();
+    const dot = d.status==='Confirmed'?'🟢':d.status==='Tentative'?'🟡':'🔴';
+    const sid = ev.id.replace(/'/g,"\\'");
+    const sname = name.replace(/'/g,"\\'");
+
+    return `<div class="bcard">
+      <div class="bcard-top">
+        <div style="flex:1;min-width:0;">
+          <div class="bname">${name}</div>
+          <div class="bmeta">
+            📅 ${dateStr}<br>
+            🕐 ${timeStr}${endStr?' → '+endStr:''} &nbsp;·&nbsp; 📍 ${ev.location||d.venue||'—'}<br>
+            👥 ${d.nop||'—'} persons &nbsp;·&nbsp; 📞 ${d.phone||'—'}
+            ${d.status?`<br>${dot} ${d.status}`:''}
+          </div>
+        </div>
+        <span class="badge ${bCls}">${bLbl}</span>
+      </div>
+      ${d.notes?`<div class="bnotes">📝 ${d.notes}</div>`:''}
+      <div class="bcard-actions">
+        <button class="abtn" onclick="openEdit('${sid}')">✏️ Amend</button>
+        <button class="abtn del" onclick="promptCancel('${sid}','${sname}')">✕ Cancel</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setFilter(f, el) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active'); curFilter = f; renderList();
+}
+
+// ─── CANCEL ────────────────────────────────────────────────────────────────
+let _cancelId;
+function promptCancel(id, name) {
+  _cancelId = id;
+  document.getElementById('cancel-dlg').classList.add('open');
+  document.getElementById('dlg-confirm').onclick = () => doCancel(id);
+}
+function closeDlg() { document.getElementById('cancel-dlg').classList.remove('open'); }
+
+async function doCancel(id) {
+  closeDlg();
+  toast('Cancelling...');
+  try {
+    const r = await gFetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CAL_ID)}/events/${encodeURIComponent(id)}`, {method:'DELETE'});
+    if (r.ok || r.status === 204) { toast('Booking cancelled', 'ok'); loadBookings(); }
+    else { toast('Could not cancel. Try again.', 'err'); }
+  } catch(e) { if (e.message !== 'Unauthorized') toast('Error', 'err'); }
+}
+
+// ─── EDIT ──────────────────────────────────────────────────────────────────
+function openEdit(id) {
+  const ev = allEvents.find(e => e.id === id);
+  if (!ev) return;
+  editId = id;
+  const d = parseDesc(ev.description||'');
+  const name = (ev.summary||'').replace(/^\[[^\]]+\]\s*/,'').split('—')[0].trim();
+  const dt = ev.start?.dateTime ? new Date(ev.start.dateTime) : null;
+  const edt = ev.end?.dateTime ? new Date(ev.end.dateTime) : null;
+
+  document.getElementById('e-name').value = name;
+  document.getElementById('e-phone').value = d.phone||'';
+  document.getElementById('e-notes').value = d.notes||'';
+  eNop = parseInt(d.nop)||20; document.getElementById('e-nop-val').textContent = eNop;
+  if (dt) { document.getElementById('e-date').value = dt.toISOString().slice(0,10); document.getElementById('e-time').value = dt.toTimeString().slice(0,5); }
+  if (edt) document.getElementById('e-endtime').value = edt.toTimeString().slice(0,5);
+
+  const ti = (d.type||'').includes('Banquet')||(d.type||'').includes('Event') ? 0 : (d.type||'').includes('Dine') ? 1 : 2;
+  document.querySelectorAll('#e-type-grid .opt').forEach((c,i) => c.classList.toggle('sel', i===ti));
+  const vi = (d.venue||ev.location||'').includes('Upstairs') ? 0 : (d.venue||ev.location||'').includes('Ground') ? 1 : 2;
+  document.querySelectorAll('#e-venue-grid .opt').forEach((c,i) => c.classList.toggle('sel', i===vi));
+
+  eStatus = d.status||'Confirmed';
+  document.querySelectorAll('#e-status-pills .pill').forEach(p => p.className='pill');
+  const ep = document.querySelector(`#e-status-pills .pill:nth-child(${eStatus==='Confirmed'?1:eStatus==='Tentative'?2:3})`);
+  if (ep) ep.classList.add('p-'+eStatus.toLowerCase());
+
+  document.getElementById('edit-sheet').classList.add('open');
+}
+
+function closeSheet() { document.getElementById('edit-sheet').classList.remove('open'); editId = null; }
+
+async function doEdit() {
+  if (!editId) return;
+  const type = getSel('e-type-grid');
+  const venue = getSel('e-venue-grid');
+  const name = document.getElementById('e-name').value.trim();
+  const phone = document.getElementById('e-phone').value.trim();
+  const date = document.getElementById('e-date').value;
+  const time = document.getElementById('e-time').value;
+  const endtime = document.getElementById('e-endtime').value;
+  const notes = document.getElementById('e-notes').value.trim();
+
+  const btn = document.getElementById('e-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  const startDT = `${date}T${time}:00`;
+  const hr = String(Math.min(23, parseInt(time) + 2)).padStart(2,'0');
+  const endDT = endtime ? `${date}T${endtime}:00` : `${date}T${hr}:${time.split(':')[1]}:00`;
+
+  const patch = {
+    summary: `[${type}] ${name} — NOP: ${eNop}`,
+    description: buildDesc({phone, nop:eNop, venue, type, status:eStatus, notes}),
+    location: venue,
+    start: {dateTime: startDT, timeZone: TZ},
+    end: {dateTime: endDT, timeZone: TZ}
+  };
+
+  try {
+    const r = await gFetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CAL_ID)}/events/${encodeURIComponent(editId)}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(patch)
+    });
+    if (r.ok) { toast('Booking updated!', 'ok'); closeSheet(); loadBookings(); }
+    else { toast('Update failed. Try again.', 'err'); }
+  } catch(e) { if (e.message !== 'Unauthorized') toast('Error', 'err'); }
+  btn.disabled = false; btn.textContent = 'Save Changes';
+}
+
+// ─── MENU ──────────────────────────────────────────────────────────────────
+function toggleMenu() { document.getElementById('signout-menu').classList.toggle('open'); }
+function closeMenu() { document.getElementById('signout-menu').classList.remove('open'); }
+document.addEventListener('click', e => {
+  if (!e.target.closest('.user-chip') && !e.target.closest('#signout-menu')) closeMenu();
+});
+
+// ─── CLOSE ON BG TAP ───────────────────────────────────────────────────────
+document.getElementById('edit-sheet').addEventListener('click', e => { if (e.target === document.getElementById('edit-sheet')) closeSheet(); });
+document.getElementById('cancel-dlg').addEventListener('click', e => { if (e.target === document.getElementById('cancel-dlg')) closeDlg(); });
+</script>
+</body>
+</html>
