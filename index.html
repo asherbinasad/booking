@@ -450,40 +450,58 @@ let tokenClient;
 // ─── INIT ──────────────────────────────────────────────────────────────────
 window.onload = () => {
   document.getElementById('f-date').value = todayStr();
-  // Check if we have a saved token
-  const saved = sessionStorage.getItem('bm_token');
-  const exp = parseInt(sessionStorage.getItem('bm_expiry') || '0');
-  if (saved && Date.now() < exp) {
-    accessToken = saved;
-    tokenExpiry = exp;
-    launchApp(JSON.parse(sessionStorage.getItem('bm_user') || '{}'));
+  const user = localStorage.getItem('bm_user');
+  if (user) {
+    // User has signed in before — try silent token refresh first
+    launchApp(JSON.parse(user));
+    silentRefresh();
   }
 };
 
 function todayStr() { return new Date().toISOString().split('T')[0]; }
 
 // ─── AUTH ──────────────────────────────────────────────────────────────────
-function startAuth() {
-  tokenClient = google.accounts.oauth2.initTokenClient({
+function initTokenClient(prompt) {
+  return google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
+    prompt: prompt,
     callback: (resp) => {
-      if (resp.error) { toast('Sign in failed. Please try again.', 'err'); return; }
+      if (resp.error) {
+        if (prompt === '') {
+          // Silent failed — show sign in screen
+          document.getElementById('auth-screen').style.display = 'flex';
+          document.getElementById('main-app').style.display = 'none';
+        } else {
+          toast('Sign in failed. Please try again.', 'err');
+        }
+        return;
+      }
       accessToken = resp.access_token;
       tokenExpiry = Date.now() + (resp.expires_in * 1000);
-      sessionStorage.setItem('bm_token', accessToken);
-      sessionStorage.setItem('bm_expiry', tokenExpiry.toString());
+      // Schedule next silent refresh 5 mins before expiry
+      setTimeout(silentRefresh, (resp.expires_in - 300) * 1000);
       fetchUserInfo();
     }
   });
-  tokenClient.requestAccessToken({prompt: 'consent'});
+}
+
+function silentRefresh() {
+  // Try to get a new token without showing a popup
+  const client = initTokenClient('');
+  client.requestAccessToken({prompt: ''});
+}
+
+function startAuth() {
+  const client = initTokenClient('consent');
+  client.requestAccessToken({prompt: 'consent'});
 }
 
 async function fetchUserInfo() {
   try {
     const r = await gFetch('https://www.googleapis.com/oauth2/v3/userinfo');
     const user = await r.json();
-    sessionStorage.setItem('bm_user', JSON.stringify(user));
+    localStorage.setItem('bm_user', JSON.stringify(user));
     launchApp(user);
   } catch(e) { launchApp({}); }
 }
@@ -503,7 +521,7 @@ function launchApp(user) {
 function signOut() {
   google.accounts.oauth2.revoke(accessToken, () => {});
   accessToken = null;
-  sessionStorage.clear();
+  localStorage.clear();
   closeMenu();
   document.getElementById('main-app').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
@@ -511,14 +529,29 @@ function signOut() {
 }
 
 // ─── API HELPER ────────────────────────────────────────────────────────────
-async function gFetch(url, opts = {}) {
-  opts.headers = { ...(opts.headers||{}), 'Authorization': `Bearer ${accessToken}` };
+async function gFetch(url, opts = {}, retry = true) {
+  if (!opts.headers) opts.headers = {};
+  opts.headers['Authorization'] = 'Bearer ' + accessToken;
   const r = await fetch(url, opts);
-  if (r.status === 401) {
-    // Token expired — re-auth
-    toast('Session expired. Please sign in again.', 'err');
-    setTimeout(() => { sessionStorage.clear(); location.reload(); }, 2000);
-    throw new Error('Unauthorized');
+  if (r.status === 401 && retry && accessToken) {
+    // Silently refresh token and retry
+    return new Promise((resolve, reject) => {
+      const rc = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID, scope: SCOPES, prompt: '',
+        callback: async (resp) => {
+          if (!resp.error) {
+            accessToken = resp.access_token;
+            opts.headers['Authorization'] = 'Bearer ' + accessToken;
+            try { resolve(await fetch(url, opts)); } catch(e) { reject(e); }
+          } else {
+            toast('Please sign in again.', 'err');
+            setTimeout(() => { localStorage.removeItem('bm_user'); location.reload(); }, 2000);
+            reject(new Error('Unauthorized'));
+          }
+        }
+      });
+      rc.requestAccessToken({prompt: ''});
+    });
   }
   return r;
 }
